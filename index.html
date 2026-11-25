@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GH-600 Practice Test</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1b1f24;--muted:#5b6470;--line:#d8dde3;--blue:#1f6feb;--blue-bg:#e8f0fe;--good:#1a7f37;--good-bg:#e6f4ea;--bad:#cf222e;--bad-bg:#fdecee}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:10px 16px calc(10px) 16px;padding-top:max(10px,env(safe-area-inset-top))}
+header h1{font-size:18px;margin:0}
+.bar{height:8px;background:var(--line);border-radius:4px;margin-top:8px;overflow:hidden}
+.bar>div{height:100%;background:var(--blue);width:0;transition:width .2s}
+#count{font-size:14px;color:var(--muted);margin-top:4px}
+main{max-width:720px;margin:0 auto;padding:16px 12px 120px}
+.q,#results{scroll-margin-top:84px}
+.intro{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:16px;font-size:16px}
+.q{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.tag{font-size:12px;padding:2px 8px;border-radius:10px;background:#eef1f4;color:var(--muted)}
+.tag.gh{background:#24292f;color:#fff}
+.qn{font-weight:600;color:var(--muted);font-size:14px}
+.stem{margin:4px 0 12px;font-weight:500}
+.opt{display:block;width:100%;text-align:left;min-height:52px;padding:12px 14px;margin:8px 0;border:2px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font:inherit;font-size:16px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.opt .l{font-weight:700;margin-right:6px}
+.opt.sel{border-color:var(--blue);background:var(--blue-bg)}
+.opt.right{border-color:var(--good);background:var(--good-bg)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-bg)}
+.opt:disabled{cursor:default}
+.btn{display:block;width:100%;min-height:54px;border:0;border-radius:12px;font:inherit;font-weight:600;font-size:17px;cursor:pointer;margin:10px 0}
+.primary{background:var(--blue);color:#fff}
+.secondary{background:#fff;color:var(--bad);border:2px solid var(--bad)}
+#hint{color:var(--bad);font-size:15px;text-align:center;min-height:22px}
+#results{display:none}
+.weak{background:#fff8e1;border:1px solid #f0d58a;border-radius:12px;padding:14px 16px;margin-bottom:14px;font-weight:600}
+.total{font-size:22px;font-weight:700;margin:4px 0 12px}
+details{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden}
+summary{list-style:none;padding:14px 16px;min-height:54px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:600}
+summary::-webkit-details-marker{display:none}
+summary .sc{white-space:nowrap}
+summary .meter{flex:0 0 70px;height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+summary .meter>div{height:100%}
+details[open] summary{border-bottom:1px solid var(--line)}
+.miss{padding:12px 16px;border-bottom:1px solid #eef1f4;font-size:15px}
+.miss:last-child{border-bottom:0}
+.miss .s{font-weight:600;margin-bottom:6px}
+.miss .y{color:var(--bad)}
+.miss .c{color:var(--good);font-weight:600}
+.miss a{color:var(--blue);word-break:break-word}
+.allright{padding:12px 16px;color:var(--good)}
+.gh-note{font-size:14px;color:var(--muted);margin:2px 0 14px}
+</style>
+</head>
+<body>
+<header>
+  <h1>GH-600 Practice Test</h1>
+  <div class="bar"><div id="prog"></div></div>
+  <div id="count">0 of 36 answered</div>
+</header>
+<main>
+  <div class="intro" id="intro">
+    36 practice questions for the GitHub Certified: Agentic AI Developer exam (GH-600). They follow the six official skill areas. Questions with a dark "GitHub" tag test GitHub itself, so you get a separate GitHub score. Tap an answer to pick it. Your picks are saved on this phone, so you can close the page and come back.
+  </div>
+  <div id="quiz"></div>
+  <div id="hint"></div>
+  <button class="btn primary" id="submit">Submit and see my scores</button>
+  <section id="results">
+    <div class="weak" id="weak"></div>
+    <div class="total" id="total"></div>
+    <div id="bars"></div>
+    <p class="gh-note">Tap a bar to see the questions you missed in that area. Your answers are also marked in green and red above.</p>
+  </section>
+  <button class="btn secondary" id="reset">Start over</button>
+</main>
+<script>
+(function(){
+var L={
+ study:"https://learn.microsoft.com/en-us/credentials/certifications/resources/study-guides/gh-600",
+ risk:"https://docs.github.com/en/copilot/concepts/security-governance-and-network-settings/risks-and-mitigations",
+ review:"https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/review-copilot-output",
+ setup:"https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-cloud-agent/customize-the-agent-environment",
+ mcpca:"https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/configure-mcp-servers",
+ reg:"https://docs.github.com/en/copilot/how-tos/administer-copilot/manage-mcp-usage/restrict-based-on-registry",
+ remote:"https://github.com/github/github-mcp-server/blob/main/docs/remote-server.md",
+ syntax:"https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax",
+ rules:"https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets",
+ owners:"https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners",
+ env:"https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments",
+ instr:"https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions",
+ agents:"https://docs.github.com/en/copilot/reference/custom-agents-configuration",
+ scan:"https://docs.github.com/en/code-security/concepts/code-scanning/code-scanning",
+ push:"https://docs.github.com/en/code-security/concepts/secret-security/push-protection",
+ pat:"https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens",
+ worktree:"https://git-scm.com/docs/git-worktree",
+ concur:"https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency",
+ firewall:"https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-the-firewall"
+};
+var D={
+ 1:"Planning how agents fit into your work",
+ 2:"Tools and MCP",
+ 3:"Memory and state",
+ 4:"Testing and tuning agents",
+ 5:"Running many agents together",
+ 6:"Safety rules and human checks"
+};
+// d=domain, gh=GitHub-heavy, a=index of correct option
+var Q=[
+{d:1,gh:0,s:"Your agent jumps straight into editing files and often fixes the wrong problem. What change helps most?",o:["Let it edit freely, then have a reviewer agent compare each change to the task and revert the wrong ones","Make it run every test after each single file edit","Give it the full repo history and every open issue so it understands the code better first","Have it write a plan (steps, files, success check) and wait for approval before editing"],a:3,e:"Keeping planning apart from doing lets a person or checker catch a wrong plan before any file changes. The exam calls this separating planning from execution and validating the plan. Reverting after the fact still lets wrong edits happen; the check belongs before any file changes.",l:L.study},
+{d:1,gh:0,s:"You ask an agent to \"make the login page better.\" Each run gives a very different result. What should you do first?",o:["Define the inputs, expected output, and a pass/fail check before tuning anything","Lower the model temperature so every run gives a more consistent, repeatable answer to the same request","Add examples of good login pages to the prompt","Run it several times and merge the best parts of each result"],a:0,e:"An agent cannot hit a target nobody defined. Clear inputs, outputs, and success checks come before any tuning. Lower temperature makes runs alike, not right, when nobody has defined right.",l:L.study},
+{d:1,gh:0,s:"One huge prompt asks an agent to research, design, code, test, and deploy a feature in a single run. It often fails halfway. What is the problem and the fix?",o:["Context limit: move to a model with a larger context window so every stage fits in one run","Missing tools: give the agent deploy rights earlier in the run","Too much in one step: split into stages with a check between each","Weak prompt: add more detail on each of the five steps to the same single prompt"],a:2,e:"Doing everything in one unchecked run is a common anti-pattern. Small stages with checkpoints make failures easy to spot and recover from. A bigger context window does not add checkpoints between stages.",l:L.study},
+{d:1,gh:1,s:"Your managers want to see what your agents changed and why, using the tools the team already uses every day. What is the best setup?",o:["A dashboard showing each agent's full chat transcript, updated live so all the managers can follow","Deliver work as a branch and pull request with a description, linked issue, and passing checks","A shared log file that every agent appends to after each run, kept in a folder the managers can open","A daily summary each agent posts to the team channel"],a:1,e:"Pull requests are inspectable artifacts inside standard tooling: they show the diff, the reason, the checks, and the review history in one place. Chat summaries and logs do not show the diff, checks, and review history in one place.",l:L.review},
+{d:1,gh:1,s:"You ask Copilot cloud agent (formerly called coding agent) to open a pull request. The repo requires 1 approval before merging. You approve it yourself. What happens?",o:["It counts, because Copilot authored the pull request","Your approval does not count; someone else must approve","It counts only if you are a repository admin","Copilot approves as the second reviewer, so it can merge"],a:1,e:"GitHub stops the person who asked Copilot for the pull request from being the approval that counts, so the required review stays meaningful. Copilot also cannot approve or merge its own pull requests. Copilot cannot approve or merge its own pull requests, and admin status does not change this.",l:L.risk},
+{d:1,gh:1,s:"An agent's GitHub Actions workflow runs tests and then deploys to production. You want a person to approve only the production deploy, not every test run. What should you use?",o:["Require pull request approval before the workflow runs at all","Switch the whole workflow to a manual workflow_dispatch trigger","Put CODEOWNERS on the workflow file for the deploy step","Put the deploy job in an environment with required reviewers"],a:3,e:"Environment protection rules pause only the jobs that use that environment until a listed reviewer approves. That puts the human check where the risk is without slowing the rest. Requiring PR approval or a manual trigger would gate the test jobs too. Required reviewers on private repos need GitHub Enterprise; on Free, Pro, and Team plans they work only on public repos.",l:L.env},
+{d:1,gh:0,s:"You are starting with a brand-new agent and you do not know how reliable it is yet. How much freedom should it get at first?",o:["Low: it proposes pull requests that people review and merge; widen as it earns trust","Medium: it merges small changes alone and asks a person to review anything large or risky first","High: full access, with a rollback plan if anything breaks","None: keep it read-only until it never makes a mistake"],a:0,e:"Plan autonomy in levels. Start where mistakes are easy to catch and undo, then widen as the track record grows. Waiting for zero mistakes means the agent never starts; trust is earned in steps.",l:L.study},
+{d:2,gh:1,s:"Your team wants Copilot cloud agent to use an extra MCP server (a tool server) when it works on one repository. Where do you add it?",o:["In .github/copilot-instructions.md, listing the server URL and the tools Copilot may use","In .vscode/mcp.json committed to the repository, so every agent that opens the repo picks it up","Repository Settings > Copilot > MCP servers, as JSON with an \"mcpServers\" object","In copilot-setup-steps.yml, as a step that starts the server"],a:2,e:"Repo admins add MCP servers for the cloud agent as JSON in the repository's Copilot settings. Each server lists its type and the tools allowed. .vscode/mcp.json is for editors, not the cloud agent; instructions files do not configure tools.",l:L.mcpca},
+{d:2,gh:1,s:"A teammate's MCP setup for Copilot cloud agent says tools: [\"*\"] for a server that can also delete things. Why does security push back?",o:["The agent uses these tools without asking, so \"*\" turns on write and delete too; list only read-only tools","\"*\" is not valid syntax, so the server will fail to load","\"*\" also exposes the server's resources and prompts as well as its tools, which can leak private repository data","\"*\" lets that server's calls bypass the agent firewall"],a:0,e:"GitHub's docs say the cloud agent uses MCP tools on its own without asking, so they strongly suggest allowing only specific read-only tools. A star allows all of them. '*' is valid syntax, and the cloud agent only uses MCP tools, not resources or prompts.",l:L.mcpca},
+{d:2,gh:1,s:"An MCP server for Copilot cloud agent needs an API key. How should you give it the key?",o:["A repository Actions secret with any name, referenced as ${{ secrets.NAME }}","An environment variable set in copilot-setup-steps.yml","An Agents secret named COPILOT_MCP_..., referenced by name in the MCP JSON","A Dependabot secret, since it is scoped to automation"],a:2,e:"Only agents secrets and variables whose names start with COPILOT_MCP_ are handed to the MCP setup. The key stays out of the repo and out of plain text. Plain Actions secrets are not passed to the MCP setup; only Agents secrets prefixed COPILOT_MCP_ are.",l:L.mcpca},
+{d:2,gh:1,s:"You connect an agent to GitHub's remote MCP server (https://api.githubcopilot.com/mcp/). It should only look at issues and code, never change anything. What do you set?",o:["Send the X-MCP-Lockdown: true header, which hides write tools from the agent's session","Enable only the repos and issues toolsets with the X-MCP-Toolsets header, so it cannot reach anything else","Nothing; the remote server is read-only unless you add /write","Read-only mode: add /readonly to the URL or send the X-MCP-Readonly header"],a:3,e:"Read-only mode exposes only the \"read\" tools. You can also narrow it to certain toolsets with the X-MCP-Toolsets header. Lockdown mode only hides some public content, and the repos and issues toolsets still include write tools.",l:L.remote},
+{d:2,gh:1,s:"Your company wants developers to use only approved MCP servers inside Copilot in their editors. Using the MCP registry feature, which setup does that?",o:["Set the registry URL and choose \"Allow all\"","Set the MCP Registry URL in enterprise or org Copilot settings and choose \"Registry only\"","Add the approved servers to each repository's MCP settings JSON so that only those servers can be used","Ask each developer to turn off Copilot connectors in their editor"],a:1,e:"With \"Registry only\", only servers in your registry may run. Note: it matches by server name or ID and can be worked around by editing config files, so GitHub calls it a preview and points to managed settings for stronger control. 'Allow all' places no limits; per-repo JSON only covers the cloud agent, not editors.",l:L.reg},
+{d:2,gh:1,s:"Copilot cloud agent keeps failing because it cannot install your project's tools before it starts work. What is the fix?",o:["Add the install commands to .github/copilot-instructions.md so the agent runs them before it starts work","Add a copilot-setup-steps job to your existing CI workflow file so it runs with the rest of your build steps","Add .github/workflows/copilot-setup-steps.yml with one copilot-setup-steps job, on the default branch","Add copilot-setup-steps.yml on a feature branch and assign the issue there"],a:2,e:"The setup-steps file prepares the agent's machine before it starts. The job must be named copilot-setup-steps and the file must be on the default branch, or it is ignored. The file must be its own workflow, the job must be named copilot-setup-steps, and it must be on the default branch.",l:L.setup},
+{d:2,gh:1,s:"A GitHub Actions workflow runs an agent that only needs to read the code and leave comments on pull requests. Which permissions block is best?",o:["contents: read and pull-requests: write","contents: read only; comments need no extra permission","contents: write and pull-requests: write","No block; the default token is always read-only"],a:0,e:"Give the GITHUB_TOKEN only what the job needs. Once you list any permission, every permission you did not list is set to none. Commenting needs pull-requests: write; the default token's access depends on repo settings, so it is not always read-only.",l:L.syntax},
+{d:2,gh:1,s:"You give Copilot cloud agent a new task from an issue. Where can it push its changes?",o:["Any branch whose name starts with copilot/, since that prefix marks a branch as reserved for the agent's own work","Only its own single copilot/ branch, or the pull request's branch if you mention it on an existing pull request","The issue's linked branch, or main if there is none","Any branch not covered by branch protection"],a:1,e:"The agent can push to just one branch. For new work it makes a copilot/ branch, which keeps main and other branches safe. Branch names starting with copilot/ are not a wildcard; it gets exactly one branch.",l:L.risk},
+{d:3,gh:0,s:"A long agent task gets restarted halfway and the agent redoes steps it already finished. What prevents this?",o:["Keep the whole conversation history in the context window and replay it from the start when the run restarts","Raise the run's timeout so it is never cut off midway","Keep progress only in the agent's chat memory for that session, and ask it where it had stopped before","After each step, write progress and decisions to a checkpoint file, and read it first when resuming"],a:3,e:"Writing progress and decisions down as a durable artifact lets the agent pick up where it left off without repeating or changing past decisions. Context and chat memory are lost when the run restarts; a file is not.",l:L.study},
+{d:3,gh:0,s:"An agent keeps using a note in its memory about an API version that changed last month, so its code is wrong. What is the best fix?",o:["Wipe all memory every night so nothing gets old","Pin the old API version in the project so that the note in the agent's memory stays correct from now on","Mark the note as high priority so the agent rereads it before it writes any code that uses the API","Date or expire memory notes, prune old ones, and check facts that change against a live source"],a:3,e:"Stale context is fixed with expiry and pruning rules plus checking live sources, not by wiping everything. Pinning an old version keeps the code wrong; wiping all memory loses good notes too.",l:L.study},
+{d:3,gh:0,s:"Three agents work on one feature: one in an editor, one in a command line tool, and one in the cloud. They keep working from different versions of the plan. What helps most?",o:["Each agent keeps its own plan in its own memory, and a person merges the three plans together at the end","One shared plan in one place (the issue or pull request) that all of them read and update, with owners","The cloud agent's plan wins whenever they disagree","Paste the latest plan into each agent's prompt by hand each morning"],a:1,e:"One source of truth that every agent reads prevents conflicting context across tools and environments. Merging separate plans at the end is how conflicts are created, not avoided.",l:L.study},
+{d:3,gh:1,s:"You want Copilot to always follow your team's coding rules in every session, but forget its scratch notes after each task. Where do the team rules go?",o:["In .github/copilot-instructions.md (long-term); scratch notes stay short-term and are dropped after the task","In a personal instructions file that each developer on the team sets up once in their own Copilot settings page","In a prompt file you run at the start of each task","In the repository's pull request template"],a:0,e:"Rules that never change belong in long-term memory such as the repo instructions file. Copilot reads it automatically. Path-specific rules can go in .github/instructions/*.instructions.md. Personal instructions are per developer and prompt files must be run by hand, so neither always applies team-wide.",l:L.instr},
+{d:4,gh:1,s:"You want an automatic safety check on every pull request your agents open, so you get a signal about security problems in their code. What should you turn on?",o:["Dependabot version updates on a weekly schedule, so the agent's dependencies are always the newest versions","A required review from a second Copilot agent","Code scanning (for example CodeQL) and secret scanning with push protection","Branch protection that requires signed commits on every pull request the agents open"],a:2,e:"Automated scanning tools give a repeatable evaluation signal. Code scanning flags risky code and push protection blocks secrets before they reach the repo. Dependabot version updates bump dependencies; they do not scan the agent's own code. Push protection blocks secrets at push time, before a pull request even exists.",l:L.scan},
+{d:4,gh:0,s:"Which of these is a quantitative (number-based) signal for judging your agents?",o:["Reviewer notes on whether the agent's code is easy to follow, collected after each of its pull requests","The share of agent pull requests that pass checks and merge without rework","Developer survey comments about the agent's tone and how helpful its explanations feel","A written summary of the agent's reasoning for each task"],a:1,e:"Quantitative signals are counts and rates you can track over time. The other choices are qualitative (opinion) signals, which are also useful but different. Notes, comments, and summaries are qualitative (opinion) signals.",l:L.study},
+{d:4,gh:0,s:"The agent's plan was correct, but it kept calling the file search tool with the wrong input format, so every call failed. How do you classify the root cause?",o:["Tool misuse","Reasoning error","Environment problem","Bad success criteria"],a:0,e:"The thinking was right; the tool was used the wrong way. Fix it with a clearer tool description, an example, or input checks.",l:L.study},
+{d:4,gh:1,s:"Copilot cloud agent's work fails because a package will not download, even though the same install works on your laptop. What is the most likely cause?",o:["Copilot cannot run package managers in its environment, so all packages must be committed to the repository","The package must be listed in copilot-instructions.md first","The agent runs on Windows, which blocks package downloads","The agent firewall limits internet access; allow the host, or preinstall in setup steps"],a:3,e:"GitHub limits the cloud agent's internet access by default. This is an environment issue, not a thinking issue. Copilot can run package managers; the firewall does not apply to setup steps, so preinstalling works.",l:L.firewall},
+{d:4,gh:1,s:"A pull request from Copilot cloud agent contains a strange change. Where do you look to find out why it did that?",o:["The pull request's Checks tab, which shows the test results for each of the agent's commits","The repository audit log","The agent's session log (\"View session\" on the pull request, also linked in each commit)","The review comments on the Files changed tab, where Copilot explains each line that it edited"],a:2,e:"Session logs show the steps and tools the agent used. Each agent commit links back to its session log for review and audit. The Checks tab shows test results and the audit log shows events; neither shows the agent's reasoning and tool calls.",l:L.risk},
+{d:4,gh:0,s:"Your evaluation shows an agent often edits files that have nothing to do with its task. What is the best tuning step?",o:["Switch to a larger model that follows instructions better, then re-run the same evaluation to compare results","Add a reviewer agent that reverts unrelated edits after each run","Tighten its instructions and limit which files and tools it can use, then re-run the evaluation","Accept it, since the tests still pass"],a:2,e:"Tune instructions, scope, and tool access based on what the evaluation found, then re-measure to prove the change helped. A larger model does not stop out-of-scope edits if scope and tools stay wide.",l:L.study},
+{d:5,gh:0,s:"A job splits into several independent parts that can be done at the same time, then combined and checked. Which pattern fits best?",o:["A lead agent splits the work, workers each do one part, and a reviewer checks the combined result","One agent does all of the parts in sequence, then checks its own combined result at the very end of the run","A pipeline where each agent waits for the previous one to finish, passing its output down the line to the next","Several agents each do the whole job, then vote"],a:0,e:"This is the orchestrator and worker pattern. Independent parts run in parallel and a separate reviewer catches mistakes. Voting has every agent repeat the whole job instead of splitting it.",l:L.study},
+{d:5,gh:1,s:"Two agents work in the same repository on one computer at the same time and keep overwriting each other's files. What is the cleanest fix?",o:["Own branch each, in the same working folder","Give each agent its own branch and its own git worktree","Separate clones that both push straight to main","A lock file so only one agent edits at a time"],a:1,e:"A git worktree gives each agent its own working folder and branch, so parallel work stays isolated until it is merged. Branches alone share one working folder, so files still collide.",l:L.worktree},
+{d:5,gh:1,s:"Agents sometimes start two GitHub Actions deploy runs at the same time, and the runs clash. What should you add to the workflow?",o:["timeout-minutes on the deploy job","A needs: link between the two deploy jobs","An environment with a wait timer","A concurrency group (cancel-in-progress can stop the older run)"],a:3,e:"The concurrency key lets only one run per group go at once. A new run waits, or with cancel-in-progress: true it cancels the run already going. A timeout or wait timer delays runs but does not stop two from overlapping.",l:L.concur},
+{d:5,gh:0,s:"Two agents give opposite answers about whether a change is safe. What should happen?",o:["Send both answers and their evidence to a reviewer or person to decide against the real source, and record it","Use the answer from the agent that reports higher confidence","Have a third agent vote and take the majority","Ask both agents again until they agree"],a:0,e:"Contradictory outputs need a tie-breaker that checks evidence, plus a written decision so the team can audit it later. Confidence and majority votes are not evidence; check against the real source.",l:L.study},
+{d:5,gh:1,s:"An agent runs as a GitHub Actions job. Sometimes it hangs and the job sits there for hours. What is a simple guard?",o:["A concurrency group with cancel-in-progress","continue-on-error: true on the job","A retry step after the agent step","Set timeout-minutes on the job, then retry or alert someone"],a:3,e:"Jobs run up to 360 minutes by default. A shorter timeout-minutes turns a stalled run into a clear failure you can retry or escalate. continue-on-error only stops a failure from failing the run; it does not stop a hang.",l:L.syntax},
+{d:5,gh:0,s:"You need to retire an old agent from your multi-agent workflow. What is the right way?",o:["Remove its access first so it cannot do anything else, then reassign its unfinished tasks to the other agents","Delete it and its logs once a replacement is running","Stop new work, let it finish or hand off, keep its logs and artifacts, then remove its access","Disable it, but keep its access in case it is needed again"],a:2,e:"Retiring an agent should keep the workflow moving and keep the audit trail. Remove access last, and keep the records. Removing access first strands work in progress; deleting logs breaks the audit trail.",l:L.study},
+{d:6,gh:1,s:"An agent needs to push code to exactly one repository. Which credential follows least privilege?",o:["A classic token with only the repo scope","A fine-grained token or GitHub App limited to that one repository and only the permissions it needs","An org-wide GitHub App installation with contents: write","A fine-grained token for all repositories with contents: write"],a:1,e:"A classic token can reach every repo you can. Fine-grained tokens and GitHub Apps can be limited to selected repos and narrow permissions. A classic repo-scope token reaches every repository you can access.",l:L.pat},
+{d:6,gh:1,s:"Any agent change to the payments folder must be approved by the payments team. What should you set up?",o:["CODEOWNERS for the folder, with no change to branch rules","CODEOWNERS naming the payments team for that folder, plus \"Require review from Code Owners\" on main","A ruleset requiring 2 approvals from anyone with write access","A \"payments\" label the team must add before merging"],a:1,e:"CODEOWNERS says who owns which files. The branch rule makes their approval required before merging. Code owners need write access to the repo. Without the 'Require review from Code Owners' rule, CODEOWNERS only requests a review; it does not require one.",l:L.owners},
+{d:6,gh:1,s:"Copilot cloud agent pushed new commits to its pull request, but no GitHub Actions checks ran. Why, and what should you do?",o:["Copilot pull requests skip Actions until marked ready for review","The workflows wait for the copilot-setup-steps job to run first","Workflows wait for someone with write access to review and click \"Approve and run workflows\"; review, then approve","The agent's firewall blocks GitHub Actions from starting"],a:2,e:"This default stops unreviewed agent code from reaching your Actions secrets or getting write access. Admins can turn it off, but GitHub warns about the risk. Marking a pull request ready for review does not run the workflows; the approval button does.",l:L.risk},
+{d:6,gh:0,s:"Every single agent action needs a human approval, and work has slowed to a crawl. What is the best change?",o:["Sort actions by risk: low-risk, easy-to-undo ones run alone; keep approvals for risky or permanent ones","Batch the approvals so a person signs off once per day","Remove approvals but keep full logs to audit later","Let agents approve each other's actions"],a:0,e:"Right-size human checks. Approvals that do not lower real risk only slow delivery. Daily batches still slow every action, and unreviewed risky actions are not made safe by logs.",l:L.study},
+{d:6,gh:1,s:"The platform team has a ruleset on main that requires 1 approval. The security team adds another ruleset on main that requires 2 approvals. What applies?",o:["Only the newest ruleset applies","1, because layering uses the least restrictive rule","Whichever ruleset has the higher priority number","They combine, and the most restrictive applies: 2 approvals"],a:3,e:"Rulesets have no ranking. All rulesets that target a branch are combined, and when they set the same rule differently, the most restrictive version applies. Rulesets have no priority or order; the strictest version of the rule applies.",l:L.rules}
+];
+var KEY="gh600-practice-v3";
+var state=load();
+function load(){try{var s=JSON.parse(localStorage.getItem(KEY));if(s&&s.ans)return s;}catch(e){}return {ans:{},done:false};}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
+var quiz=document.getElementById("quiz");
+function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e;}
+function render(){
+ quiz.innerHTML="";
+ Q.forEach(function(q,i){
+  var card=el("div","q");card.id="q"+i;
+  var tags=el("div","tags");
+  tags.appendChild(el("span","qn","Question "+(i+1)));
+  tags.appendChild(el("span","tag","Domain "+q.d+": "+D[q.d]));
+  if(q.gh)tags.appendChild(el("span","tag gh","GitHub"));
+  card.appendChild(tags);
+  card.appendChild(el("div","stem",q.s));
+  q.o.forEach(function(t,j){
+   var b=el("button","opt");b.type="button";
+   b.appendChild(el("span","l","ABCD"[j]+"."));b.appendChild(document.createTextNode(t));
+   var pick=state.ans[i];
+   if(state.done){b.disabled=true;if(j===q.a)b.className+=" right";else if(pick===j)b.className+=" wrong";}
+   else if(pick===j)b.className+=" sel";
+   b.addEventListener("click",function(){if(state.done)return;state.ans[i]=j;save();render();});
+   card.appendChild(b);
+  });
+  quiz.appendChild(card);
+ });
+ var n=Object.keys(state.ans).length;
+ document.getElementById("count").textContent=state.done?"Submitted":n+" of "+Q.length+" answered";
+ document.getElementById("prog").style.width=(n/Q.length*100)+"%";
+ document.getElementById("submit").style.display=state.done?"none":"block";
+ if(state.done)showResults();else document.getElementById("results").style.display="none";
+}
+function color(p){return p>=0.8?"#1a7f37":p>=0.6?"#bf8700":"#cf222e";}
+function showResults(){
+ var groups=[];
+ for(var d=1;d<=6;d++)groups.push({name:D[d],f:(function(d){return function(q){return q.d===d;};})(d)});
+ groups.push({name:"GitHub knowledge",f:function(q){return q.gh===1;}});
+ var bars=document.getElementById("bars");bars.innerHTML="";
+ var right=0;
+ Q.forEach(function(q,i){if(state.ans[i]===q.a)right++;});
+ document.getElementById("total").textContent="Overall: "+right+"/"+Q.length+" ("+Math.round(right/Q.length*100)+"%)";
+ groups.forEach(function(g){
+  var tot=0,ok=0,miss=[];
+  Q.forEach(function(q,i){if(!g.f(q))return;tot++;if(state.ans[i]===q.a)ok++;else miss.push(i);});
+  g.tot=tot;g.ok=ok;g.p=ok/tot;
+  var det=el("details");det.setAttribute("data-group",g.name);
+  var sum=el("summary");
+  sum.appendChild(el("span","",g.name));
+  var right2=el("span","");right2.style.display="flex";right2.style.alignItems="center";right2.style.gap="10px";
+  var m=el("span","meter");var mi=el("div");mi.style.width=(g.p*100)+"%";mi.style.background=color(g.p);m.appendChild(mi);
+  right2.appendChild(m);right2.appendChild(el("span","sc",ok+"/"+tot));
+  sum.appendChild(right2);det.appendChild(sum);
+  if(!miss.length)det.appendChild(el("div","allright","All correct in this area."));
+  miss.forEach(function(i){
+   var q=Q[i],box=el("div","miss");
+   box.appendChild(el("div","s","Q"+(i+1)+". "+q.s));
+   var y=state.ans[i];
+   box.appendChild(el("div","y","Your answer: "+(y==null?"(none)":"ABCD"[y]+". "+q.o[y])));
+   box.appendChild(el("div","c","Right answer: "+"ABCD"[q.a]+". "+q.o[q.a]));
+   box.appendChild(el("div","",q.e));
+   var a=el("a","","Official docs");a.href=q.l;a.target="_blank";a.rel="noopener";
+   var p=el("div","");p.appendChild(a);box.appendChild(p);
+   det.appendChild(box);
+  });
+  bars.appendChild(det);
+ });
+ var ranked=groups.slice().sort(function(a,b){return a.p-b.p||(b.tot-b.ok)-(a.tot-a.ok);});
+ var w=ranked.slice(0,2);
+ document.getElementById("weak").textContent=(w[0].p===1&&w[1].p===1)?"No weak areas: you got everything right.":"Your 2 weakest areas: "+w[0].name+" ("+w[0].ok+"/"+w[0].tot+") and "+w[1].name+" ("+w[1].ok+"/"+w[1].tot+").";
+ document.getElementById("results").style.display="block";
+}
+document.getElementById("submit").addEventListener("click",function(){
+ var left=[];Q.forEach(function(q,i){if(state.ans[i]==null)left.push(i);});
+ var hint=document.getElementById("hint");
+ if(left.length){hint.textContent=left.length+" question"+(left.length>1?"s":"")+" not answered yet. Taking you to the first one.";document.getElementById("q"+left[0]).scrollIntoView({behavior:"smooth",block:"start"});return;}
+ hint.textContent="";state.done=true;save();render();
+ document.getElementById("results").scrollIntoView({behavior:"smooth",block:"start"});
+});
+document.getElementById("reset").addEventListener("click",function(){
+ if(!confirm("Clear all your answers and start over?"))return;
+ state={ans:{},done:false};save();document.getElementById("hint").textContent="";render();window.scrollTo(0,0);
+});
+render();
+})();
+</script>
+</body>
+</html>
