@@ -51,6 +51,15 @@ details[open] summary{border-bottom:1px solid var(--line)}
 .miss a{color:var(--blue);word-break:break-word}
 .allright{padding:12px 16px;color:var(--good)}
 .gh-note{font-size:14px;color:var(--muted);margin:2px 0 14px}
+.opt.dim{opacity:.6}
+.fb{margin-top:10px;padding:12px 14px;border-radius:10px;font-size:15px}
+.fb-ok{background:var(--good-bg);border:1px solid #a6d8b4}
+.fb-no{background:var(--bad-bg);border:1px solid #f1a9b0}
+.fbh{font-weight:700;margin-bottom:4px}
+.fb a{color:var(--blue)}
+#copybox{display:none;width:100%;min-height:200px;font:14px/1.4 ui-monospace,Menlo,monospace;border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:8px}
+#copymsg{font-size:15px;color:var(--good);min-height:20px;text-align:center}
+#history{display:none;margin-top:10px}
 </style>
 </head>
 <body>
@@ -61,7 +70,7 @@ details[open] summary{border-bottom:1px solid var(--line)}
 </header>
 <main>
   <div class="intro" id="intro">
-    36 practice questions for the GitHub Certified: Agentic AI Developer exam (GH-600). They follow the six official skill areas. Questions with a dark "GitHub" tag test GitHub itself, so you get a separate GitHub score. Tap an answer to pick it. Your picks are saved on this phone, so you can close the page and come back.
+    36 practice questions for the GitHub Certified: Agentic AI Developer exam (GH-600). They follow the six official skill areas. Questions with a dark "GitHub" tag test GitHub itself, so you get a separate GitHub score. Tap an answer to pick it. Your first pick is final, and you see right away if it was right, with a short explanation. Your picks and past attempts are saved on this phone, so you can close the page and come back.
   </div>
   <div id="quiz"></div>
   <div id="hint"></div>
@@ -71,7 +80,11 @@ details[open] summary{border-bottom:1px solid var(--line)}
     <div class="total" id="total"></div>
     <div id="bars"></div>
     <p class="gh-note">Tap a bar to see the questions you missed in that area. Your answers are also marked in green and red above.</p>
+    <button class="btn primary" id="copy" type="button">Copy my results</button>
+    <div id="copymsg"></div>
+    <textarea id="copybox" readonly aria-label="Your results as text"></textarea>
   </section>
+  <section id="history"></section>
   <button class="btn secondary" id="reset">Start over</button>
 </main>
 <script>
@@ -144,12 +157,21 @@ var Q=[
 {d:6,gh:0,s:"Every single agent action needs a human approval, and work has slowed to a crawl. What is the best change?",o:["Sort actions by risk: low-risk, easy-to-undo ones run alone; keep approvals for risky or permanent ones","Batch the approvals so a person signs off once per day","Remove approvals but keep full logs to audit later","Let agents approve each other's actions"],a:0,e:"Right-size human checks. Approvals that do not lower real risk only slow delivery. Daily batches still slow every action, and unreviewed risky actions are not made safe by logs.",l:L.study},
 {d:6,gh:1,s:"The platform team has a ruleset on main that requires 1 approval. The security team adds another ruleset on main that requires 2 approvals. What applies?",o:["Only the newest ruleset applies","1, because layering uses the least restrictive rule","Whichever ruleset has the higher priority number","They combine, and the most restrictive applies: 2 approvals"],a:3,e:"Rulesets have no ranking. All rulesets that target a branch are combined, and when they set the same rule differently, the most restrictive version applies. Rulesets have no priority or order; the strictest version of the rule applies.",l:L.rules}
 ];
-var KEY="gh600-practice-v3";
+var KEY="gh600-practice-v4";
 var state=load();
-function load(){try{var s=JSON.parse(localStorage.getItem(KEY));if(s&&s.ans)return s;}catch(e){}return {ans:{},done:false};}
+function fresh(){return {started:new Date().toISOString(),ans:{},done:false};}
+function load(){try{var s=JSON.parse(localStorage.getItem(KEY));if(s&&s.cur&&s.hist)return s;}catch(e){}return {cur:fresh(),hist:[]};}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
 var quiz=document.getElementById("quiz");
 function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e;}
+function pickOf(i){var r=state.cur.ans[i];return r?r.pick:null;}
+function fmt(iso){try{return new Date(iso).toLocaleString([], {year:"numeric",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});}catch(e){return iso;}}
+function docLink(q){var a=el("a","","Official docs");a.href=q.l;a.target="_blank";a.rel="noopener";var p=el("div","");p.appendChild(a);return p;}
+function choose(i,j){
+ if(state.cur.ans[i]||state.cur.done)return;
+ state.cur.ans[i]={pick:j,right:j===Q[i].a,t:new Date().toISOString()};
+ save();render();
+}
 function render(){
  quiz.innerHTML="";
  Q.forEach(function(q,i){
@@ -160,72 +182,126 @@ function render(){
   if(q.gh)tags.appendChild(el("span","tag gh","GitHub"));
   card.appendChild(tags);
   card.appendChild(el("div","stem",q.s));
+  var pick=pickOf(i),locked=pick!=null;
   q.o.forEach(function(t,j){
    var b=el("button","opt");b.type="button";
    b.appendChild(el("span","l","ABCD"[j]+"."));b.appendChild(document.createTextNode(t));
-   var pick=state.ans[i];
-   if(state.done){b.disabled=true;if(j===q.a)b.className+=" right";else if(pick===j)b.className+=" wrong";}
-   else if(pick===j)b.className+=" sel";
-   b.addEventListener("click",function(){if(state.done)return;state.ans[i]=j;save();render();});
+   if(locked){b.disabled=true;if(j===q.a)b.className+=" right";else if(pick===j)b.className+=" wrong";else b.className+=" dim";}
+   else b.addEventListener("click",function(){choose(i,j);});
    card.appendChild(b);
   });
+  if(locked){
+   var ok=pick===q.a,fb=el("div","fb "+(ok?"fb-ok":"fb-no"));
+   fb.appendChild(el("div","fbh",ok?"Right.":"Not quite. The right answer is "+"ABCD"[q.a]+"."));
+   fb.appendChild(el("div","",q.e));
+   fb.appendChild(docLink(q));
+   card.appendChild(fb);
+  }
   quiz.appendChild(card);
  });
- var n=Object.keys(state.ans).length;
- document.getElementById("count").textContent=state.done?"Submitted":n+" of "+Q.length+" answered";
+ var n=0,r=0;for(var k in state.cur.ans){n++;if(state.cur.ans[k].right)r++;}
+ document.getElementById("count").textContent=(state.cur.done?"Finished: ":"")+n+" of "+Q.length+" answered · "+r+" right so far";
  document.getElementById("prog").style.width=(n/Q.length*100)+"%";
- document.getElementById("submit").style.display=state.done?"none":"block";
- if(state.done)showResults();else document.getElementById("results").style.display="none";
+ document.getElementById("submit").style.display=state.cur.done?"none":"block";
+ document.getElementById("results").style.display=state.cur.done?"block":"none";
+ if(state.cur.done)showResults();
+ renderHistory();
 }
 function color(p){return p>=0.8?"#1a7f37":p>=0.6?"#bf8700":"#cf222e";}
-function showResults(){
+function score(ans){
  var groups=[];
  for(var d=1;d<=6;d++)groups.push({name:D[d],f:(function(d){return function(q){return q.d===d;};})(d)});
  groups.push({name:"GitHub knowledge",f:function(q){return q.gh===1;}});
- var bars=document.getElementById("bars");bars.innerHTML="";
- var right=0;
- Q.forEach(function(q,i){if(state.ans[i]===q.a)right++;});
- document.getElementById("total").textContent="Overall: "+right+"/"+Q.length+" ("+Math.round(right/Q.length*100)+"%)";
- groups.forEach(function(g){
-  var tot=0,ok=0,miss=[];
-  Q.forEach(function(q,i){if(!g.f(q))return;tot++;if(state.ans[i]===q.a)ok++;else miss.push(i);});
-  g.tot=tot;g.ok=ok;g.p=ok/tot;
+ var right=0,missed=[];
+ Q.forEach(function(q,i){if(ans[i]&&ans[i].pick===q.a)right++;else missed.push(i+1);});
+ groups.forEach(function(g){g.tot=0;g.ok=0;g.miss=[];Q.forEach(function(q,i){if(!g.f(q))return;g.tot++;if(ans[i]&&ans[i].pick===q.a)g.ok++;else g.miss.push(i);});g.p=g.ok/g.tot;});
+ return {right:right,missed:missed,groups:groups};
+}
+function showResults(){
+ var s=score(state.cur.ans),bars=document.getElementById("bars");bars.innerHTML="";
+ document.getElementById("total").textContent="Overall: "+s.right+"/"+Q.length+" ("+Math.round(s.right/Q.length*100)+"%)";
+ s.groups.forEach(function(g){
   var det=el("details");det.setAttribute("data-group",g.name);
   var sum=el("summary");
   sum.appendChild(el("span","",g.name));
   var right2=el("span","");right2.style.display="flex";right2.style.alignItems="center";right2.style.gap="10px";
   var m=el("span","meter");var mi=el("div");mi.style.width=(g.p*100)+"%";mi.style.background=color(g.p);m.appendChild(mi);
-  right2.appendChild(m);right2.appendChild(el("span","sc",ok+"/"+tot));
+  right2.appendChild(m);right2.appendChild(el("span","sc",g.ok+"/"+g.tot));
   sum.appendChild(right2);det.appendChild(sum);
-  if(!miss.length)det.appendChild(el("div","allright","All correct in this area."));
-  miss.forEach(function(i){
+  if(!g.miss.length)det.appendChild(el("div","allright","All correct in this area."));
+  g.miss.forEach(function(i){
    var q=Q[i],box=el("div","miss");
    box.appendChild(el("div","s","Q"+(i+1)+". "+q.s));
-   var y=state.ans[i];
+   var y=pickOf(i);
    box.appendChild(el("div","y","Your answer: "+(y==null?"(none)":"ABCD"[y]+". "+q.o[y])));
    box.appendChild(el("div","c","Right answer: "+"ABCD"[q.a]+". "+q.o[q.a]));
    box.appendChild(el("div","",q.e));
-   var a=el("a","","Official docs");a.href=q.l;a.target="_blank";a.rel="noopener";
-   var p=el("div","");p.appendChild(a);box.appendChild(p);
+   box.appendChild(docLink(q));
    det.appendChild(box);
   });
   bars.appendChild(det);
  });
- var ranked=groups.slice().sort(function(a,b){return a.p-b.p||(b.tot-b.ok)-(a.tot-a.ok);});
- var w=ranked.slice(0,2);
+ var w=s.groups.slice().sort(function(a,b){return a.p-b.p||(b.tot-b.ok)-(a.tot-a.ok);}).slice(0,2);
  document.getElementById("weak").textContent=(w[0].p===1&&w[1].p===1)?"No weak areas: you got everything right.":"Your 2 weakest areas: "+w[0].name+" ("+w[0].ok+"/"+w[0].tot+") and "+w[1].name+" ("+w[1].ok+"/"+w[1].tot+").";
- document.getElementById("results").style.display="block";
 }
+function record(){
+ var s=score(state.cur.ans);
+ return {date:state.cur.finished,started:state.cur.started,total:s.right,of:Q.length,
+  areas:s.groups.slice(0,6).map(function(g){return {name:g.name,ok:g.ok,tot:g.tot};}),
+  gh:{ok:s.groups[6].ok,tot:s.groups[6].tot},missed:s.missed,answers:state.cur.ans};
+}
+function resultText(h){
+ var lines=["GH-600 practice test results","Date: "+fmt(h.date),"Total: "+h.total+"/"+h.of+" ("+Math.round(h.total/h.of*100)+"%)"];
+ h.areas.forEach(function(a,k){lines.push("Area "+(k+1)+" "+a.name+": "+a.ok+"/"+a.tot);});
+ lines.push("GitHub knowledge: "+h.gh.ok+"/"+h.gh.tot);
+ lines.push("Missed questions: "+(h.missed.length?h.missed.join(", "):"none"));
+ return lines.join("\n");
+}
+function renderHistory(){
+ var box=document.getElementById("history");box.innerHTML="";
+ if(!state.hist.length){box.style.display="none";return;}
+ box.style.display="block";
+ var det=el("details"),sum=el("summary");
+ sum.appendChild(el("span","","Past attempts ("+state.hist.length+")"));det.appendChild(sum);
+ state.hist.slice().reverse().forEach(function(h){
+  var row=el("div","miss");
+  row.appendChild(el("div","s",fmt(h.date)+": "+h.total+"/"+h.of+" ("+Math.round(h.total/h.of*100)+"%)"));
+  row.appendChild(el("div","",h.areas.map(function(a){return a.name+" "+a.ok+"/"+a.tot;}).join(" · ")));
+  row.appendChild(el("div","","GitHub knowledge "+h.gh.ok+"/"+h.gh.tot));
+  row.appendChild(el("div","","Missed: "+(h.missed.length?h.missed.join(", "):"none")));
+  det.appendChild(row);
+ });
+ box.appendChild(det);
+}
+function copyText(t){
+ var msg=document.getElementById("copymsg");
+ function fallback(){
+  var ta=document.getElementById("copybox");ta.value=t;ta.style.display="block";
+  ta.removeAttribute("readonly");ta.focus();ta.select();ta.setSelectionRange(0,t.length);ta.setAttribute("readonly","");
+  var ok=false;try{ok=document.execCommand("copy");}catch(e){}
+  msg.textContent=ok?"Copied. Paste it into Telegram.":"Could not copy automatically. Press and hold the text below, then Copy.";
+ }
+ if(navigator.clipboard&&navigator.clipboard.writeText){
+  navigator.clipboard.writeText(t).then(function(){msg.textContent="Copied. Paste it into Telegram.";var ta=document.getElementById("copybox");ta.value=t;},fallback);
+ } else fallback();
+}
+document.getElementById("copy").addEventListener("click",function(){
+ var h=state.cur.done?state.hist[state.hist.length-1]:null;
+ if(!h)return;copyText(resultText(h));
+});
 document.getElementById("submit").addEventListener("click",function(){
- var left=[];Q.forEach(function(q,i){if(state.ans[i]==null)left.push(i);});
+ var left=[];Q.forEach(function(q,i){if(!state.cur.ans[i])left.push(i);});
  var hint=document.getElementById("hint");
  if(left.length){hint.textContent=left.length+" question"+(left.length>1?"s":"")+" not answered yet. Taking you to the first one.";document.getElementById("q"+left[0]).scrollIntoView({behavior:"smooth",block:"start"});return;}
- hint.textContent="";state.done=true;save();render();
+ hint.textContent="";state.cur.done=true;state.cur.finished=new Date().toISOString();
+ state.hist.push(record());save();render();
  document.getElementById("results").scrollIntoView({behavior:"smooth",block:"start"});
 });
 document.getElementById("reset").addEventListener("click",function(){
- if(!confirm("Clear all your answers and start over?"))return;
- state={ans:{},done:false};save();document.getElementById("hint").textContent="";render();window.scrollTo(0,0);
+ var msg=state.cur.done?"Start a new attempt? Your past results stay saved.":"Start a new attempt? This unfinished attempt will not be saved. Finished attempts stay saved.";
+ if(!confirm(msg))return;
+ state.cur=fresh();save();document.getElementById("hint").textContent="";document.getElementById("copymsg").textContent="";
+ var ta=document.getElementById("copybox");ta.value="";ta.style.display="none";render();window.scrollTo(0,0);
 });
 render();
 })();
